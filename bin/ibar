@@ -1,0 +1,159 @@
+#! /usr/bin/env python3
+
+# ------------------
+# Library
+# ------------------
+
+import argparse
+import logging
+import ibar
+
+# ------------------
+# ArgumentParser
+# ------------------
+
+parser = argparse.ArgumentParser(
+    description='Analysis CRISPR/Cas9 screening data, capable of analysis data with or without barcode integrated.'
+)
+
+parser.add_argument(
+    '-i', '--input',
+    action='store',
+    help='Count table, should include <gene> <guide> <barcode> <control> <treatment>.',
+    required=True
+)
+parser.add_argument(
+    '-b', '--with-barcode',
+    action='store_true',
+    default=False,
+    help='Whether the data contain barcode.'
+)
+parser.add_argument(
+    '--col-gene',
+    action='store',
+    default='gene',
+    help='The column name of gene column in input file.'
+)
+parser.add_argument(
+    '--col-guide',
+    action='store',
+    default='guide',
+    help='The column name of guide column in input file.'
+)
+parser.add_argument(
+    '--col-barcode',
+    action='store',
+    default='barcode',
+    help='The column name of barcode column in input file.'
+)
+parser.add_argument(
+    '-c', '--col-control',
+    action='store',
+    nargs='+',
+    required=True,
+    help='The column name of control column in input file.'
+)
+parser.add_argument(
+    '-t', '--col-treat',
+    action='store',
+    nargs='+',
+    required=True,
+    help='The column name of treatment column in input file.'
+)
+parser.add_argument(
+    '-o', '--outprefix',
+    action='store',
+    default='outfile',
+    help='Output file prefix.'
+)
+parser.add_argument(
+    '--largerthan',
+    action='store',
+    type=float,
+    default=10.0,
+    help='Normalized count should be larger than the threshold gaven, default is 10.'
+)
+parser.add_argument(
+    '--test',
+    action='store',
+    default='norm',
+    choices=['norm'],
+    help='The test method used in analysis.'
+)
+parser.add_argument(
+    '--RRApath',
+    action='store',
+    default='RRA',
+    help='The Robust Rank Aggregation program path.'
+)
+parser.add_argument(
+    '-p', '--print-level',
+    action='store',
+    default='WARNING',
+    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+    help='The information print level of the running program.'
+)
+
+
+args = parser.parse_args()
+
+# ------------------
+# massage print level
+# ------------------
+
+logging.basicConfig(
+    format='%(asctime)s -*- [%(levelname)s] -*- %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=getattr(logging, args.print_level.upper())
+)
+
+
+logging.info('Program Start.')
+
+# ------------------
+# column names
+# ------------------
+
+colnames = dict()
+colnames['gene'] = args.col_gene
+colnames['guide'] = args.col_guide
+colnames['barcode'] = args.col_barcode
+colnames['control'] = args.col_control
+colnames['treat'] = args.col_treat
+
+# ------------------
+# Input data
+# ------------------
+
+inputpath = args.input
+
+inputdata = ibar.readdata(
+    inputpath,
+    genelab=colnames['gene'],
+    guidelab=colnames['guide'],
+    barcodelab=colnames['barcode'],
+    controlids=colnames['control'],
+    treatids=colnames['treat'],
+    hasbarcode=args.with_barcode
+)
+
+# ------------------
+# Test data
+# ------------------
+
+ibar.analysis(
+    inputdata,
+    outprefix=args.outprefix,
+    controlids=colnames['control'],
+    treatids=colnames['treat'],
+    hasbarcode=args.with_barcode,
+    normthreshold=args.largerthan,
+    test=args.test,
+    rrapath=args.RRApath
+)
+
+logging.info('Programe Finished!')
+
+# ------------------
+# EOF
+# ------------------

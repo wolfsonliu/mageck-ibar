@@ -1,45 +1,138 @@
-**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
+# ibar #
 
-When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
+## Description ##
 
-*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+ibar is the analysis software for CRISPR/Cas9 with iBAR system applied library screening.
 
----
 
-## Edit a file
+## Installation ##
 
-You’ll start by editing this README file to learn how to edit a file in Bitbucket.
+The software is developed for Linux system using [Python 3](https://www.python.org) language.
 
-1. Click **Source** on the left side.
-2. Click the README.md link from the list of files.
-3. Click the **Edit** button.
-4. Delete the following text: *Delete this line to make a change to the README from Bitbucket.*
-5. After making your change, click **Commit** and then **Commit** again in the dialog. The commit page will open and you’ll see the change you just made.
-6. Go back to the **Source** page.
+### Dependency ###
 
----
+The software takes great advantages of following Python packages.
 
-## Create a file
+#### Operation System ####
 
-Next, you’ll add a new file to this repository.
+For the operation system, **Linux** are the applying platform. And any of the major maintaining distribution is sufficient, centos, fedora, debian, ubuntu for instance.
 
-1. Click the **New file** button at the top of the **Source** page.
-2. Give the file a filename of **contributors.txt**.
-3. Enter your name in the empty file space.
-4. Click **Commit** and then **Commit** again in the dialog.
-5. Go back to the **Source** page.
+#### Python and Information ####
 
-Before you move on, go ahead and explore the repository. You've already seen the **Source** page, but check out the **Commits**, **Branches**, and **Settings** pages.
+1. [Python](https://www.python.org/) (require version > 3.x)
+1. [Pandas](http://pandas.pydata.org) (require version > 0.18) is an open source data structures and data analysis tools for Python.
+2. [NumPy](http://www.numpy.org/) (require version > 1.10) is the fundamental Python package for scientific computing.
+3. [SciPy](https://www.scipy.org) (require version > 0.17) is the python ecosystem for mathematics, science, and engineering. Pandas and NumPy are also the core packages of SciPy.
+4. [RRA](https://sourceforge.net/projects/mageck/) in MAGeCk is integrated in the ibar software. 
 
----
+### From Source ###
 
-## Clone a repository
+1. Download the souce code.
+2. enter the directory.
+3. `python3 setup.py install`
 
-Use these steps to clone from SourceTree, our client for using the repository command-line free. Cloning allows you to work on your files locally. If you don't yet have SourceTree, [download and install first](https://www.sourcetreeapp.com/). If you prefer to clone from the command line, see [Clone a repository](https://confluence.atlassian.com/x/4whODQ).
+## Usage ##
 
-1. You’ll see the clone button under the **Source** heading. Click that button.
-2. Now click **Check out in SourceTree**. You may need to create a SourceTree account or log in.
-3. When you see the **Clone New** dialog in SourceTree, update the destination path and name if you’d like to and then click **Clone**.
-4. Open the directory you just created to see your repository’s files.
+```{shell}
+usage: ibar [-h] -i INPUT [-b] [--col-gene COL_GENE]
+            [--col-guide COL_GUIDE] [--col-barcode COL_BARCODE] -c
+            COL_CONTROL [COL_CONTROL ...] -t COL_TREAT [COL_TREAT ...]
+            [-o OUTPREFIX] [--largerthan LARGERTHAN] [--test {norm}]
+            [--RRApath RRAPATH] [-l {DEBUG,INFO,WARNING,ERROR}]
 
-Now that you're more familiar with your Bitbucket repository, go ahead and add a new file locally. You can [push your change back to Bitbucket with SourceTree](https://confluence.atlassian.com/x/iqyBMg), or you can [add, commit,](https://confluence.atlassian.com/x/8QhODQ) and [push from the command line](https://confluence.atlassian.com/x/NQ0zDQ).
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Count table, should include <gene> <guide> <barcode>
+                        <control> <treatment>.
+  -b, --with-barcode    Whether the data contain barcode.
+  --col-gene COL_GENE   The column name of gene column in input file.
+  --col-guide COL_GUIDE
+                        The column name of guide column in input file.
+  --col-barcode COL_BARCODE
+                        The column name of barcode column in input file.
+  -c COL_CONTROL [COL_CONTROL ...], --col-control COL_CONTROL [COL_CONTROL ...]
+                        The column name of control column in input file.
+  -t COL_TREAT [COL_TREAT ...], --col-treat COL_TREAT [COL_TREAT ...]
+                        The column name of treatment column in input file.
+  -o OUTPREFIX, --outprefix OUTPREFIX
+                        Output file prefix.
+  --largerthan LARGERTHAN
+                        Normalized count should be larger than the threshold
+                        gaven, default is 10.
+  --test {norm}         The test method used in analysis.
+  --RRApath RRAPATH     The Robust Rank Aggregation program path.
+  -p {DEBUG,INFO,WARNING,ERROR}, --print-level {DEBUG,INFO,WARNING,ERROR}
+                        The information print level of the running program.
+```
+
+
+## Demo ##
+
+For typical library screening data, the run time can be 5 minutes (1E6 barcodes with two replicates) or more, depending on the data size.
+
+Sample data is provied in the ./sample directory.
+
+### Input sample ###
+
+161124 row data with two reference and two experiment data columns.
+
+```{shell}
+gene,guide,barcode,D0R1,D0R2,PSR1,PSR2
+EMP1,AAAAAAAAGAGCCAACATGT,ATGCCA,205,225,6,6
+EMP1,AAAAAAAAGAGCCAACATGT,CTAGTA,166,138,7,3
+EMP1,AAAAAAAAGAGCCAACATGT,GTCGCG,32,20,1,0
+EMP1,AAAAAAAAGAGCCAACATGT,TTCTTC,42,64,2,5
+```
+
+### Running code ###
+
+Under linux ternimal:
+
+```{shell}
+ibar -i sample.csv -c D0R1 D0R2 -t PSR1 PSR2 -o ./sample_result
+```
+
+### Output file ###
+
+#### sample_result.sgrna.txt ####
+
+File contains the sgRNA or barcode information.
+
+#### sample_result.phigh.txt ####
+
+Analysis file for the up regulated sgRNAs.
+
+#### sample_result.plow.txt ####
+
+Analysis file for the down regulated sgRNAs.
+
+#### sample_result.gene.high.txt ####
+
+Result of ibar analysis for the enriched genes.
+
+```{shell}
+group_id, items_in_group, lo_value, p, FDR, goodsgrna
+HPRT1, 12, 3.1175e-45, 2.5936e-07, 0.000134, 12
+ITGB1, 8, 4.8659e-17, 2.5936e-07, 0.000134, 8
+SRGAP2, 7, 5.8243e-15, 2.5936e-07, 0.000134, 7
+```
+
+#### sample_result.gene.low.txt ####
+
+Result of ibar analysis for the drop-out genes.
+
+```{shell}
+group_id, items_in_group, lo_value, p, FDR, goodsgrna
+THAP11, 10, 1.5596e-08, 5.1873e-07, 0.004455, 10
+MAK16, 12, 4.4624e-08, 1.5562e-06, 0.004455, 12
+CPSF6, 7, 4.6853e-08, 1.8156e-06, 0.004455, 7
+```
+
+## License ##
+
+Released under GNU General Public License v3
+
+Author: Zhiheng Liu <zhiheng.liu@pku.edu.cn>
+Version: 0.1.2017.12.14

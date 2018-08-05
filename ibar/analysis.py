@@ -86,6 +86,7 @@ def analysis(inputdata,
 
     # normalization
     logging.info('Normalizing data.')
+
     datanorm = pd.concat(
         [
             inputdata[infocolnm],

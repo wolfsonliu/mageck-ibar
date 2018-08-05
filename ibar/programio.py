@@ -127,6 +127,10 @@ def readdata(
     else:
         data['bid'] = data['gid']
 
+    # zero count to 1
+    for x in controlids + treatids:
+        data.loc[data[x] == 0, x] = 1
+
     return data[colnm3]
 
 # ------------------

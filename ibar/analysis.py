@@ -83,6 +83,7 @@ def analysis(inputdata,
         conlabels = controlids
     else:
         conlabels = controlids + treatids
+    # conlabels = controlids + treatids
 
     # normalization
     logging.info('Normalizing data.')

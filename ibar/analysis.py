@@ -79,11 +79,9 @@ def analysis(inputdata,
     infocolnm = ['gene', 'guide', 'gid', 'barcode', 'bid']
 
     # make the labels for all consider counts columns in calculation
+    conlabels = controlids + treatids
     if (len(controlids) > 1):
         conlabels = controlids
-    else:
-        conlabels = controlids + treatids
-    # conlabels = controlids + treatids
 
     # normalization
     logging.info('Normalizing data.')
@@ -91,7 +89,7 @@ def analysis(inputdata,
     datanorm = pd.concat(
         [
             inputdata[infocolnm],
-            df_normalization(inputdata, controlids + treatids)
+            df_normalization(inputdata, controlids + treatids, 'median')
         ],
         axis=1
     )

@@ -40,14 +40,14 @@ def df_geomean(dat, label):
     elif (len(label) == 1):
         return dat[label]
     else:
-        datlog = np.log(dat[label] + 0.1)
+        datlog = np.log(dat[label] + 1)
         datlogsum = datlog.sum(axis=1)
-        gm = np.exp(datlogsum / len(label)) - 0.1
+        gm = np.exp(datlogsum / len(label)) - 1
         return gm
 
 # ------------------
 
-_helpdoc['df_normalization'] = helpstring(
+_helpdoc['df_median_ratio_normfactor'] = helpstring(
     describe='',
     parameterdicts={
         'dat': 'pd.DataFrame, data to process.',
@@ -59,16 +59,40 @@ _helpdoc['df_normalization'] = helpstring(
     ]
 )
 
-@AppendHelp(_helpdoc['df_normalization'], join='')
-def df_normalization(dat, label):
+@AppendHelp(_helpdoc['df_median_ratio_normfactor'], join='')
+def df_median_ratio_normfactor(dat, label):
     '''
     Normalize input data indicated by the label.
     Now only median ratio normalization is available.
     '''
-    datgm = df_geomean(dat, label)
-    datgm[datgm < 0] = 1
+    datgm = np.exp(np.log(dat[label] + 1.0).sum(axis=1) / len(label))
+    datgm[datgm <= 0] = 1
     meanfactor = dat[label].div(datgm, axis=0)
     normfactor = 1 / meanfactor.median(axis=0)
+    return normfactor
+
+# ------------------
+
+def df_total_count_normfactor(dat, label):
+    colsum = dat[label].sum(axis=0)
+    colsummean = colsum.sum() / len(label)
+    normfactor = colsummean / colsum
+    return normfactor
+
+# ------------------
+
+def df_normalization(dat, label, method):
+    normfactor = df_total_count_normfactor(dat, label)
+    if method == 'none':
+        normfactor = np.array([1]*len(normfactor))
+    elif method == 'median':
+        medianfactor = df_median_ratio_normfactor(dat, label)
+        if (medianfactor == 0).any():
+            logging.warning('Median factor is zero, using total count normalization')
+        elif ((dat[label] == 0).sum(axis=0) / dat.shape[0] > 0.45).any():
+            logging.warning('Too many zeros in counts, using total count normalization')
+        else:
+            normfactor = medianfactor
     result = dat[label].mul(normfactor, axis=1)
     return result
 

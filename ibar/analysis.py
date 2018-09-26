@@ -16,7 +16,8 @@ from .dfcalculate import df_normalization
 from .dfcalculate import df_leastsquare
 from .dfcalculate import df_modelmeanvar
 from .dfcalculate import df_estvar
-
+from .dfcalculate import array_fdr
+from .programio import read_rra
 from .sysrun import robustrank
 
 # ------------------
@@ -59,7 +60,9 @@ def analysis(inputdata,
              treatids,
              hasbarcode=True,
              normthreshold=10,
+             gene_test_threshold=0.25,
              test='norm',
+             tworra=False,
              rrapath='RRA'):
     '''
     Pipeline function in testing of the CRISPR/Cas9 screening data.
@@ -68,12 +71,32 @@ def analysis(inputdata,
 
     # output file names
     files = {
+        'barcodeout': outprefix + '.barcode.txt',
         'sgrnaout': outprefix + '.sgrna.txt',
+        'geneout': outprefix + '.gene.txt',
         'plowout': outprefix + '.plow.txt',
         'phighout': outprefix + '.phigh.txt',
+        'sgrnalow': outprefix + '.sgrna.low.txt',
+        'sgrnahigh': outprefix + '.sgrna.high.txt',
         'genelow': outprefix + '.gene.low.txt',
         'genehigh': outprefix + '.gene.high.txt'
     }
+    files['firstlevel'] = files['sgrnaout']
+    if hasbarcode or tworra:
+        files['firstlevel'] = files['barcodeout']
+    files['rra_low_in'] = files['plowout']
+    files['rra_low_out'] = files['genelow']
+    files['rra_high_in'] = files['phighout']
+    files['rra_high_out'] = files['genehigh']
+    if tworra:
+        files['rra_low_in'] = files['plowout']
+        files['rra_low_out'] = files['sgrnalow']
+        files['rra_high_in'] = files['phighout']
+        files['rra_high_out'] = files['sgrnahigh']
+        files['rra2_low_in'] = files['sgrnalow']
+        files['rra2_low_out'] = files['genelow']
+        files['rra2_high_in'] = files['sgrnahigh']
+        files['rra2_high_out'] = files['genehigh']
 
     # make the column names
     infocolnm = ['gene', 'guide', 'gid', 'barcode', 'bid']
@@ -123,9 +146,9 @@ def analysis(inputdata,
     logging.info('Calculating guide log2 fold change.')
 
     data['lfc'] = np.log2(
-        data['treatmean'] + 1
+        data['treatmean'] + 1.0
     ) - np.log2(
-        data['controlmean'] + 1
+        data['controlmean'] + 1.0
     )
 
     # lfc direction
@@ -144,6 +167,9 @@ def analysis(inputdata,
     data['direction'] = data['lfc_bin'].mul(
         data['large'], axis=0
     )
+
+    if tworra:
+        hasbarcode = False
 
     # calculate adjusted variance
     if hasbarcode:
@@ -189,67 +215,153 @@ def analysis(inputdata,
     ).div(np.sqrt(data['adjvar']), axis=0)
 
     data = data.assign(
-        treat_z=theta
+        treat_zscore=theta
     )
 
     if test == 'norm':
-        data['p.low'] = data['treat_z'].map(norm.cdf)
-        data['p.high'] = data['treat_z'].map(norm.sf)
+        data['p.low'] = data['treat_zscore'].map(norm.cdf)
+        data['p.high'] = data['treat_zscore'].map(norm.sf)
 
-    data.to_csv(files['sgrnaout'], index=False, sep='\t')
+    data['p.twoside'] = data[['p.low', 'p.high']].apply(
+        lambda x: 2 * x['p.low'] if x['p.low'] < x['p.high'] else 2 * x['p.high'],
+        axis=1
+    )
+    data['fdr'] = array_fdr(data['p.twoside'])
+    data.to_csv(files['firstlevel'], index=False, sep='\t')
+
+    # fold change
+    foldchange = data.groupby(['gene'])['lfc'].mean().reset_index()
+    data['symbol'] = data['gene']
+    if tworra:
+        foldchange = data.groupby(['gene', 'guide'])['lfc'].mean().reset_index()
+        data['symbol'] = data['gid']
 
     # prepare for Robust Rank Aggregation
-    pcolnm = ['sgrna', 'symbol', 'pool', 'plow', 'prob', 'chosen']
+    pcolnm = ['sgrna', 'symbol', 'pool', 'p', 'prob', 'chosen']
     # lower direction
     logging.info('Robust Rank Aggregation of lower direction data.')
     plowout = pd.DataFrame(
         {
             'sgrna': data['bid'],
-            'symbol': data['gene'],
+            'symbol': data['symbol'],
             'pool': ['list'] * data['gene'].size,
-            'plow': data['treat_z'],
+            'p': data['treat_zscore'],
             'prob': [1] * data['gene'].size,
             'chosen': [1] * data['gene'].size
         }
     )
 
     plowout[pcolnm].sort_values(
-        'plow'
-    ).to_csv(files['plowout'], index=False, sep='\t')
+        'p'
+    ).to_csv(files['rra_low_in'], index=False, sep='\t')
 
-    percentilelow = (data['p.low'] < 0.25).sum() / data['p.low'].size
+    percentilelow = (
+        data['p.low'] < gene_test_threshold
+    ).sum() / data['p.low'].size
     robustrank(
         rrapath,
-        infile=files['plowout'],
-        outfile=files['genelow'],
+        infile=files['rra_low_in'],
+        outfile=files['rra_low_out'],
         percentile=percentilelow
     )
+    rralow = read_rra(files['rra_low_out'])
+    # columns: group_id, items_in_group, lo_value, p, FDR, goodsgrna
 
     # higher direction
     logging.info('Robust Rank Aggregation of higher direction data.')
     phighout = pd.DataFrame(
         {
             'sgrna': data['bid'],
-            'symbol': data['gene'],
+            'symbol': data['symbol'],
             'pool': ['list'] * data['gene'].size,
-            'plow': -data['treat_z'],
+            'p': data['treat_zscore'] * -1,
             'prob': [1] * data['gene'].size,
             'chosen': [1] * data['gene'].size
         }
     )
 
     phighout[pcolnm].sort_values(
-        'plow'
-    ).to_csv(files['phighout'], index=False, sep='\t')
+        'p'
+    ).to_csv(files['rra_high_in'], index=False, sep='\t')
 
-    percentilehigh = (data['p.high'] < 0.25).sum() / data['p.high'].size
+    percentilehigh = (
+        data['p.high'] < gene_test_threshold
+    ).sum() / data['p.high'].size
 
     robustrank(
         rrapath,
-        infile=files['phighout'],
-        outfile=files['genehigh'],
+        infile=files['rra_high_in'],
+        outfile=files['rra_high_out'],
         percentile=percentilehigh
     )
+    rrahigh = read_rra(files['rra_high_out'])
+    # columns: group_id, items_in_group, lo_value, p, FDR, goodsgrna
+
+    # # output merged data
+    # if not tworra:
+    #     rralow.index = rralow['group_id']
+    #     rralow.columns = [
+    #         'gene', 'items', 'beta.low', 'p.low', 'FDR.low', 'good.item.low'
+    #     ]
+    #     rrahigh.index = rrahigh['group_id']
+    #     rrahigh.columns = [
+    #         'gene', 'items', 'beta.high', 'p.high', 'FDR.high', 'good.item.high'
+    #     ]
+    #     rramerge = pd.merge(rralow, rrahigh, on=['gene', 'items'])
+    #     foldchange.index = foldchange['gene']
+    #     result = pd.merge(foldchange, rramerge, on=['gene'])
+
+
+    if tworra:
+        # low
+        plowout2 = pd.DataFrame(
+            {
+                'sgrna': rralow['group_id'],
+                'symbol': rralow['group_id'].str.split('.').map(lambda x: x[0]),
+                'pool': ['list'] * rralow['group_id'].size,
+                'p': rralow['lo_value'],
+                'prob': [1] * rralow['group_id'].size,
+                'chosen': [1] * rralow['group_id'].size,
+            }
+        )
+        plowout2[pcolnm].sort_values(
+            'p'
+        ).to_csv(files['rra2_low_in'], index=False, sep='\t')
+
+        rra2percentilelow = (
+            rralow['FDR'] < gene_test_threshold
+        ).sum() / rralow['FDR'].size
+        robustrank(
+            rrapath,
+            infile=files['rra2_low_in'],
+            outfile=files['rra2_low_out'],
+            percentile=rra2percentilelow
+        )
+        rralow2 = read_rra(files['rra2_low_out'])
+        # high
+        phighout2 = pd.DataFrame(
+            {
+                'sgrna': rrahigh['group_id'],
+                'symbol': rrahigh['group_id'].str.split('.').map(lambda x: x[0]),
+                'pool': ['list'] * rrahigh['group_id'].size,
+                'p': rrahigh['lo_value'],
+                'prob': [1] * rrahigh['group_id'].size,
+                'chosen': [1] * rrahigh['group_id'].size,
+            }
+        )
+        plowout2[pcolnm].sort_values(
+            'p'
+        ).to_csv(files['rra2_high_in'], index=False, sep='\t')
+        rra2percentilehigh = (
+            rrahigh['FDR'] < gene_test_threshold
+        ).sum() / rrahigh['FDR'].size
+        robustrank(
+            rrapath,
+            infile=files['rra2_high_in'],
+            outfile=files['rra2_high_out'],
+            percentile=rra2percentilehigh
+        )
+        rrahigh2 = read_rra(files['rra2_high_out'])
 
 # ------------------
 ####################

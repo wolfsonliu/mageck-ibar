@@ -29,6 +29,12 @@ parser.add_argument(
     help='Whether the data contain barcode.'
 )
 parser.add_argument(
+    '-n', '--two-rra',
+    action='store_true',
+    default=False,
+    help='Using two cycles RRA for barcode analysis.'
+)
+parser.add_argument(
     '--col-gene',
     action='store',
     default='gene',
@@ -81,6 +87,12 @@ parser.add_argument(
     help='The test method used in analysis.'
 )
 parser.add_argument(
+    '--gene-test-fdr-threshold',
+    type=float,
+    default=0.25,
+    help='p value threshold for alpha value of RRA in gene test (RRA -p)'
+)
+parser.add_argument(
     '--RRApath',
     action='store',
     default='RRA',
@@ -95,7 +107,7 @@ parser.add_argument(
 )
 
 
-args = parser.parse_args()
+args = vars(parser.parse_args())
 
 # ------------------
 # massage print level
@@ -104,7 +116,7 @@ args = parser.parse_args()
 logging.basicConfig(
     format='%(asctime)s -*- [%(levelname)s] -*- %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=getattr(logging, args.print_level.upper())
+    level=getattr(logging, args['print_level'].upper())
 )
 
 
@@ -115,17 +127,19 @@ logging.info('Program Start.')
 # ------------------
 
 colnames = dict()
-colnames['gene'] = args.col_gene
-colnames['guide'] = args.col_guide
-colnames['barcode'] = args.col_barcode
-colnames['control'] = args.col_control
-colnames['treat'] = args.col_treat
+colnames['gene'] = args['col_gene']
+colnames['guide'] = args['col_guide']
+colnames['barcode'] = args['_barcode']
+colnames['control'] = args['col_control']
+colnames['treat'] = args['col_treat']
 
 # ------------------
 # Input data
 # ------------------
 
-inputpath = args.input
+hasbarcode = args['with_barcode'] or args['two_rra']
+
+inputpath = args['input']
 
 inputdata = ibar.readdata(
     inputpath,
@@ -134,7 +148,7 @@ inputdata = ibar.readdata(
     barcodelab=colnames['barcode'],
     controlids=colnames['control'],
     treatids=colnames['treat'],
-    hasbarcode=args.with_barcode
+    hasbarcode=hasbarcode
 )
 
 # ------------------
@@ -143,13 +157,15 @@ inputdata = ibar.readdata(
 
 ibar.analysis(
     inputdata,
-    outprefix=args.outprefix,
+    outprefix=args['outprefix'],
     controlids=colnames['control'],
     treatids=colnames['treat'],
-    hasbarcode=args.with_barcode,
-    normthreshold=args.largerthan,
-    test=args.test,
-    rrapath=args.RRApath
+    hasbarcode=args['with_barcode'],
+    normthreshold=args['largerthan'],
+    gene_test_threshold=args['gene_test_fdr_threshold'],
+    test=args['test'],
+    tworra=args['two_rra'],
+    rrapath=args['RRApath']
 )
 
 logging.info('Programe Finished!')

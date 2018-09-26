@@ -65,7 +65,7 @@ def df_median_ratio_normfactor(dat, label):
     Normalize input data indicated by the label.
     Now only median ratio normalization is available.
     '''
-    datgm = np.exp(np.log(dat[label] + 1.0).sum(axis=1) / len(label))
+    datgm = np.exp(np.log(dat[label] + 1.0).sum(axis=1) / len(label)) - 1.0
     datgm[datgm <= 0] = 1
     meanfactor = dat[label].div(datgm, axis=0)
     normfactor = 1 / meanfactor.median(axis=0)
@@ -216,6 +216,45 @@ def df_estvar(dat, meanlabel, k, b):
         lambda x: x ** k
     ) * 2 ** b + dat[meanlabel]
     return var
+
+# ------------------
+
+def df_lfc(dat, gene_colname, lfc_colname):
+    data = dat.copy()
+    return data.groupby(gene_colname)[lfc_colname].mean()
+
+# ------------------
+
+def array_fdr(pvalues, method='Benjamini-Hochberg'):
+    # https://stackoverflow.com/questions/7450957/how-to-implement-rs-p-adjust-in-python
+    pvalues = np.array(pvalues)
+    n = float(pvalues.shape[0])
+    new_pvalues = np.zeros(int(n))
+    if method == "Bonferroni":
+        new_pvalues = n * pvalues
+    elif method == "Bonferroni-Holm":
+        values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values.sort()
+        for rank, vals in enumerate(values):
+            pvalue, i = vals
+            new_pvalues[i] = (n-rank) * pvalue
+    elif method == "Benjamini-Hochberg":
+        values = [ (pvalue, i) for i, pvalue in enumerate(pvalues) ]
+        values.sort()
+        values.reverse()
+        new_values = []
+        for i, vals in enumerate(values):
+            rank = n - i
+            pvalue, index = vals
+            new_values.append((n/rank) * pvalue)
+        for i in range(0, int(n)-1):
+            if new_values[i] < new_values[i+1]:
+                new_values[i+1] = new_values[i]
+        for i, vals in enumerate(values):
+            pvalue, index = vals
+            new_pvalues[index] = new_values[i]
+    return new_pvalues
+
 
 # ------------------
 # EOF

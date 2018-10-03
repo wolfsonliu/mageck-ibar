@@ -6,7 +6,7 @@
 
 import argparse
 import logging
-import ibar
+import mibar
 
 # ------------------
 # ArgumentParser

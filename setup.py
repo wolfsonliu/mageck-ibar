@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
-package = 'ibar'
-version = '0.1.2017.12.14'
+package = 'mageck-ibar'
+version = '0.1.1'
 
 import os
 import sys
@@ -45,23 +45,23 @@ class RRAInstall(DistutilsInstall):
 setup(
     name=package,
     version=version,
-    description="The ibar software is used for analysis of CRISPR-iBAR screening data.",
+    description="The mageck-ibar software is used for analysis of CRISPR-iBAR screening data.",
     long_description=readme(),
     classifiers=[
         'Development Status :: 1 - Planning',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)'
     ],
     url='',
     author='Zhiheng Liu',
     author_email='zhiheng.liu@pku.edu.cn',
     license='GPL',
-    packages=['ibar'],
+    packages=['mibar'],
     install_requires=[
         'numpy', 'scipy', 'pandas'
     ],
-    scripts=['bin/ibar'],
-    package_dir={'ibar':'ibar'},
+    scripts=['bin/mageck-ibar'],
+    package_dir={'mibar':'mibar'},
     data_files=[('bin', ['bin/RRA'])],
     cmdclass={'install': RRAInstall, 'build_py': build_py},
     include_package_data=True,

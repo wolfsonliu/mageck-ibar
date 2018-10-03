@@ -1,8 +1,8 @@
-# ibar #
+# mageck-ibar #
 
 ## Description ##
 
-ibar is the analysis software for CRISPR/Cas9 with iBAR system applied library screening.
+mageck-ibar is the analysis software for CRISPR/Cas9 with iBAR system applied library screening.
 
 
 ## Installation ##
@@ -29,42 +29,37 @@ For the operation system, **Linux** are the applying platform. And any of the ma
 
 1. Download the souce code.
 2. enter the directory.
-3. `python3 setup.py install`
+3. `python3 setup.py install` or local install with `python3 setup.py install --user`
 
 ## Usage ##
 
 ```{shell}
-usage: ibar [-h] -i INPUT [-b] [--col-gene COL_GENE]
-            [--col-guide COL_GUIDE] [--col-barcode COL_BARCODE] -c
-            COL_CONTROL [COL_CONTROL ...] -t COL_TREAT [COL_TREAT ...]
-            [-o OUTPREFIX] [--largerthan LARGERTHAN] [--test {norm}]
-            [--RRApath RRAPATH] [-l {DEBUG,INFO,WARNING,ERROR}]
+usage: mageck-ibar [-h] -i INPUT [-b] [-n] [--col-gene COL_GENE]
+                   [--col-guide COL_GUIDE] [--col-barcode COL_BARCODE]
+                   -c COL_CONTROL [COL_CONTROL ...] -t COL_TREAT [COL_TREAT ...]
+                   [-o OUTPREFIX] [--largerthan LARGERTHAN] [--test {norm}]
+                   [--gene-test-fdr-threshold GENE_TEST_FDR_THRESHOLD]
+                   [--RRApath RRAPATH] [-p {DEBUG,INFO,WARNING,ERROR}]
 
+Analysis CRISPR/Cas9 screening data, capable of analysis data with or without
+barcode integrated.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Count table, should include <gene> <guide> <barcode>
-                        <control> <treatment>.
+  -i INPUT, --input INPUT Count table, should include <gene> <guide> <barcode> <control> <treatment>.
   -b, --with-barcode    Whether the data contain barcode.
+  -n, --two-rra         Using two cycles RRA for barcode analysis.
   --col-gene COL_GENE   The column name of gene column in input file.
-  --col-guide COL_GUIDE
-                        The column name of guide column in input file.
-  --col-barcode COL_BARCODE
-                        The column name of barcode column in input file.
-  -c COL_CONTROL [COL_CONTROL ...], --col-control COL_CONTROL [COL_CONTROL ...]
-                        The column name of control column in input file.
-  -t COL_TREAT [COL_TREAT ...], --col-treat COL_TREAT [COL_TREAT ...]
-                        The column name of treatment column in input file.
-  -o OUTPREFIX, --outprefix OUTPREFIX
-                        Output file prefix.
-  --largerthan LARGERTHAN
-                        Normalized count should be larger than the threshold
-                        gaven, default is 10.
+  --col-guide COL_GUIDE The column name of guide column in input file.
+  --col-barcode COL_BARCODE The column name of barcode column in input file.
+  -c COL_CONTROL [COL_CONTROL ...], --col-control COL_CONTROL [COL_CONTROL ...] The column name of control column in input file.
+  -t COL_TREAT [COL_TREAT ...], --col-treat COL_TREAT [COL_TREAT ...] The column name of treatment column in input file.
+  -o OUTPREFIX, --outprefix OUTPREFIX Output file prefix.
+  --largerthan LARGERTHAN Normalized count should be larger than the threshold gaven, default is 10.
   --test {norm}         The test method used in analysis.
+  --gene-test-fdr-threshold GENE_TEST_FDR_THRESHOLD p value threshold for alpha value of RRA in gene test (RRA -p)
   --RRApath RRAPATH     The Robust Rank Aggregation program path.
-  -p {DEBUG,INFO,WARNING,ERROR}, --print-level {DEBUG,INFO,WARNING,ERROR}
-                        The information print level of the running program.
+  -p {DEBUG,INFO,WARNING,ERROR}, --print-level {DEBUG,INFO,WARNING,ERROR} The information print level of the running program.
 ```
 
 
@@ -91,7 +86,7 @@ EMP1,AAAAAAAAGAGCCAACATGT,TTCTTC,42,64,2,5
 Under linux ternimal:
 
 ```{shell}
-ibar -i sample.csv -c D0R1 D0R2 -t PSR1 PSR2 -o ./sample_result
+mageck-ibar -i sample.csv -c D0R1 D0R2 -t PSR1 PSR2 -o ./sample_result
 ```
 
 ### Output file ###
@@ -135,4 +130,4 @@ CPSF6, 7, 4.6853e-08, 1.8156e-06, 0.004455, 7
 Released under GNU General Public License v3
 
 Author: Zhiheng Liu <zhiheng.liu@pku.edu.cn>
-Version: 0.1.2017.12.14
+Version: 0.1.1

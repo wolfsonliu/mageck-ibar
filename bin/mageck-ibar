@@ -6,7 +6,7 @@
 
 import argparse
 import logging
-import ibar
+import mibar
 
 # ------------------
 # ArgumentParser
@@ -129,7 +129,7 @@ logging.info('Program Start.')
 colnames = dict()
 colnames['gene'] = args['col_gene']
 colnames['guide'] = args['col_guide']
-colnames['barcode'] = args['_barcode']
+colnames['barcode'] = args['col_barcode']
 colnames['control'] = args['col_control']
 colnames['treat'] = args['col_treat']
 
@@ -141,7 +141,7 @@ hasbarcode = args['with_barcode'] or args['two_rra']
 
 inputpath = args['input']
 
-inputdata = ibar.readdata(
+inputdata = mibar.readdata(
     inputpath,
     genelab=colnames['gene'],
     guidelab=colnames['guide'],
@@ -155,7 +155,7 @@ inputdata = ibar.readdata(
 # Test data
 # ------------------
 
-ibar.analysis(
+mibar.analysis(
     inputdata,
     outprefix=args['outprefix'],
     controlids=colnames['control'],

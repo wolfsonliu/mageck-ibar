@@ -297,20 +297,6 @@ def analysis(inputdata,
     rrahigh = read_rra(files['rra_high_out'])
     # columns: group_id, items_in_group, lo_value, p, FDR, goodsgrna
 
-    # # output merged data
-    # if not tworra:
-    #     rralow.index = rralow['group_id']
-    #     rralow.columns = [
-    #         'gene', 'items', 'beta.low', 'p.low', 'FDR.low', 'good.item.low'
-    #     ]
-    #     rrahigh.index = rrahigh['group_id']
-    #     rrahigh.columns = [
-    #         'gene', 'items', 'beta.high', 'p.high', 'FDR.high', 'good.item.high'
-    #     ]
-    #     rramerge = pd.merge(rralow, rrahigh, on=['gene', 'items'])
-    #     foldchange.index = foldchange['gene']
-    #     result = pd.merge(foldchange, rramerge, on=['gene'])
-
 
     if tworra:
         # low

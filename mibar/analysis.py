@@ -265,7 +265,7 @@ def analysis(inputdata,
         percentile=percentilelow
     )
     rralow = read_rra(files['rra_low_out'])
-    # columns: group_id, items_in_group, lo_value, p, FDR, goodsgrna
+    # columns: group_id, items_in_group, beta, p, FDR, goodsgrna
 
     # higher direction
     logging.info('Robust Rank Aggregation of higher direction data.')
@@ -295,8 +295,11 @@ def analysis(inputdata,
         percentile=percentilehigh
     )
     rrahigh = read_rra(files['rra_high_out'])
-    # columns: group_id, items_in_group, lo_value, p, FDR, goodsgrna
-
+    # columns: group_id, items_in_group, beta, p, FDR, goodsgrna
+    mresult = pd.merge(
+        rralow, rrahigh, how='inner',
+        on=['group_id'], suffixes=['.low', '.high']
+    )
 
     if tworra:
         # low
@@ -305,7 +308,7 @@ def analysis(inputdata,
                 'sgrna': rralow['group_id'],
                 'symbol': rralow['group_id'].str.split('.').map(lambda x: x[0]),
                 'pool': ['list'] * rralow['group_id'].size,
-                'p': rralow['lo_value'],
+                'p': rralow['beta'],
                 'prob': [1] * rralow['group_id'].size,
                 'chosen': [1] * rralow['group_id'].size,
             }
@@ -330,7 +333,7 @@ def analysis(inputdata,
                 'sgrna': rrahigh['group_id'],
                 'symbol': rrahigh['group_id'].str.split('.').map(lambda x: x[0]),
                 'pool': ['list'] * rrahigh['group_id'].size,
-                'p': rrahigh['lo_value'],
+                'p': rrahigh['beta'],
                 'prob': [1] * rrahigh['group_id'].size,
                 'chosen': [1] * rrahigh['group_id'].size,
             }
@@ -348,6 +351,13 @@ def analysis(inputdata,
             percentile=rra2percentilehigh
         )
         rrahigh2 = read_rra(files['rra2_high_out'])
+        mresult = pd.merge(
+            rralow2, rrahigh2, how='inner',
+            on=['group_id'], suffixes=['.low', '.high']
+        )
+    return mresult
+
+
 
 # ------------------
 ####################

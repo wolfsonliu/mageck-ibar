@@ -1,0 +1,13 @@
+Exp.,Type,Count
+Ctrl_1,Fastq,100000
+Ctrl_2,Fastq,100000
+Ctrl_1,Raw,0000
+Ctrl_2,Raw,100000
+Ctrl_1,Library,100000
+Ctrl_2,Library,100000
+Exp_1,Fastq,100000
+Exp_2,Fastq,100000
+Exp_1,Raw,100000
+Exp_2,Raw,100000
+Exp_1,Library,100000
+Exp_2,Library,100000

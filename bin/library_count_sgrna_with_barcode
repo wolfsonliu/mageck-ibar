@@ -1,0 +1,158 @@
+#! /usr/bin/bash
+####################
+# countbarcode
+#     Description:
+#         Count the sgrna with barcode from paired-end fastq files
+####################
+function printusage {
+    echo "Usage: $0 [-h] -a apattern -p gpattern -b bpattern -f input1.fq -r input2.fq" 1>&2
+}
+
+function printhelp {
+    printusage
+    echo "" 1>&2
+    echo "Parameters:" 1>&2
+    echo "    h: print this help" 1>&2
+    echo "    a: the sgRNA with barcode pattern to be used, for example: ACCG([ATGC]{20})GTTT[ATGC]{5,35}TGGA([ATCG]{6})AACA" 1>&2
+    echo "    p: the sgRNA pattern to be used, for example: ACCG([ATGC]{20})GTTT" 1>&2
+    echo "    b: the barcode pattern to be used, for example: TGGA([ATCG]{6})AACA" 1>&2
+    echo "    f: the forward fastq file to be count reads." 1>&2
+    echo "    r: the reverse fastq file to be count reads." 1>&2
+    echo "    l: the library file: gene <tab> guide <tab> barcode." 1>&2
+    echo "" 1>&2
+    echo "Input:" 1>&2
+    echo "    the input files should be fastq files." 1>&2
+    echo "" 1>&2
+    echo "Output:" 1>&2
+    echo "    the reads count will be output to /dev/stdout (1>)" 1>&2
+}
+
+ov=1
+
+while getopts "ha:p:b:f:r:l:" opt; do
+  case ${opt} in
+    h)
+      printhelp; exit 0
+      ;;
+    a)
+      APATTERN=${OPTARG}
+      ;;
+    p)
+      GPATTERN=${OPTARG}
+      ;;
+    b)
+      BPATTERN=${OPTARG}
+      ;;
+    f)
+      fqf=${OPTARG}
+      ;;
+    r)
+      fqr=${OPTARG}
+      ;;
+    l)
+      lib=${OPTARG}
+      ;;
+    \?)
+      echo "Invalid option: -"${OPTARG}
+      printusage; exit 1
+      ;;
+  esac
+done
+
+
+# check the required parameters
+if [ -z "${fqf}" ]; then
+    printusage
+    exit 1
+fi
+
+if [ -z "${fqr}" ]; then
+    printusage
+    exit 1
+fi
+
+if [ -z "${APATTERN}" ]; then
+    APATTERN="ACCG([ATGC]{20})GTTT[ATGC]{5,35}TGGA([ATCG]{6})AACA"
+fi
+if [ -z "${GPATTERN}" ]; then
+    GPATTERN="ACCG([ATGC]{20})GTTT"
+fi
+if [ -z "${BPATTERN}" ]; then
+    BPATTERN="TGGA([ATCG]{6})AACA"
+fi
+####################
+
+function reverse_complement {
+    rev | tr "ATGC" "TACG"
+}
+
+function fq2_to_seqpair {
+    cat $2 | reverse_complement | paste $1 - | awk 'FNR % 4 == 2 {print $0}'
+}
+
+function fq2_to_seqpair2 {
+    cat $2 | reverse_complement | paste $1 - | awk 'FNR % 4 == 2 {print $0}'
+    cat $1 | reverse_complement | paste $2 - | awk 'FNR % 4 == 2 {print $0}'
+}
+
+
+function seqpair_guide_barcode {
+    awk -v APAT=$APATTERN -v GPAT=$GPATTERN -v BPAT=$BPATTERN 'BEGIN {
+            FS="\t";
+            APATTERN=APAT;
+            GPATTERN=GPAT;
+            BPATTERN=BPAT;
+        }
+        $0 ~ APATTERN {
+            match($1, APATTERN, a);
+            match($2, BPATTERN, b);
+            print substr($1, a[1, "start"], a[1, "length"]) FS substr($1, a[2, "start"], a[2, "length"]) FS substr($2, b[1, "start"], b[1, "length"]);
+        }' $@
+}
+
+function count_guide_barcode {
+    awk 'BEGIN {
+        FS="\t";
+    }
+    {
+        row=($1 FS $2 FS $3);
+        lcount[row] += 1;
+    }
+    END {
+        for (x in lcount) {
+            print x FS lcount[x];
+        }
+    }' $@
+}
+
+function map_to_lib_with_barcode {
+    awk -F '\t' 'FNR == NR && FNR !=1 {
+        lib[($1 FS $2 FS $3)] = 0;
+        guidebar_gene[($2 FS $3)] = $1;
+    }
+    FNR != NR {
+        if (guidebar_gene[($1 FS $2)] != "") {
+            gene = guidebar_gene[($1 FS $2)];
+            lib[(gene FS $1 FS $2)] += $4;
+        } else if (guidebar_gene[($1 FS $3)] != "") {
+            gene = guidebar_gene[($1 FS $3)];
+            lib[(gene FS $1 FS $3)] += $4;
+        }
+    }
+    END {
+
+        for (i in lib) {
+            print i FS lib[i];
+        }
+    }' $@
+}
+####################
+
+echo -e "gene\tguide\tbarcode\tcount"
+
+fq2_to_seqpair2 ${fqf} ${fqr} | \
+    seqpair_guide_barcode - | \
+    count_guide_barcode | \
+    map_to_lib_with_barcode ${lib} - | sort -V
+
+####################
